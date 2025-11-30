@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nemus</title>
+    
+    <!-- PWA Setup -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/111827/3b82f6?text=N">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+
+        /* Tile Transitions */
+        .tile { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Modal Animation */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 200ms, transform 200ms; }
+        .modal-exit { opacity: 1; transform: scale(1); }
+        .modal-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 200ms, transform 200ms; }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #3b82f6; cursor: pointer; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #374151; border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header / Stats -->
+    <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-20 shadow-lg select-none">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Life Score -->
+            <div class="flex items-center gap-4">
+                <div class="relative w-16 h-16 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" stroke="#374151" stroke-width="4" fill="transparent" />
+                        <circle id="score-circle" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" 
+                            stroke-dasharray="175.9" stroke-dashoffset="0" class="text-green-500 transition-all duration-1000" />
+                    </svg>
+                    <span id="life-score" class="absolute text-xl font-bold">100</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">nemus</h1>
+                    <p class="text-xs text-gray-400">Maintenance Score</p>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-6 w-full md:w-auto justify-center">
+                <div class="flex items-center gap-2 w-32">
+                    <i class="fas fa-th text-gray-500 text-xs"></i>
+                    <input type="range" id="zoom-slider" min="0" max="2" step="1" value="0">
+                    <i class="fas fa-stop text-gray-500 text-xs"></i>
+                </div>
+
+                <button onclick="openModal('add-modal')" class="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-full shadow-lg transition transform hover:scale-105 active:scale-95">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button onclick="openSettings()" class="text-gray-400 hover:text-white transition">
+                    <i class="fas fa-cog text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Grid -->
+    <main class="flex-grow p-4 md:p-8 overflow-y-auto pb-24">
+        <div id="grid-container" class="grid gap-2 mx-auto transition-all duration-300">
+            <!-- Tiles injected here -->
+        </div>
+        
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center mt-20 text-gray-500">
+            <i class="fas fa-seedling text-6xl mb-4 text-gray-700"></i>
+            <h2 class="text-2xl font-semibold mb-2">Start your garden</h2>
+            <p>Add meaningful activities to keep alive.</p>
+        </div>
+    </main>
+
+    <!-- Add Task Modal -->
+    <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700 shadow-2xl transform transition-all">
+            <h2 class="text-xl font-bold mb-4">New Activity</h2>
+            <form id="add-form" onsubmit="handleAddTask(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                    <input type="text" id="task-title" required class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500" placeholder="e.g., Call Mom">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Frequency (Days)</label>
+                    <input type="number" id="task-freq" required min="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500" placeholder="7">
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('add-modal')" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium">Create Tile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-gray-800 rounded-xl p-6 w-full max-w-sm border border-gray-700 shadow-2xl text-center transform transition-all relative">
+            <button onclick="closeModal('detail-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- Default View -->
+            <div id="detail-view-main">
+                <div id="detail-color-indicator" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-gray-700 shadow-inner transition-colors duration-500"></div>
+                <h2 id="detail-title" class="text-2xl font-bold mb-1 break-words">Task Title</h2>
+                <p id="detail-freq" class="text-gray-400 text-sm mb-6">Every 7 days</p>
+
+                <div class="grid grid-cols-2 gap-4 mb-6 text-left bg-gray-900 p-4 rounded-lg">
+                    <div>
+                        <p class="text-xs text-gray-500">Last Done</p>
+                        <p id="detail-last" class="font-mono text-sm">2 days ago</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Health</p>
+                        <p id="detail-health" class="font-mono text-sm font-bold">100%</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button onclick="handleDoneNow()" class="w-full py-4 bg-green-600 hover:bg-green-500 rounded-lg text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fas fa-check"></i> Done Now
+                    </button>
+                    <button onclick="showDeleteConfirm()" class="text-red-900 hover:text-red-500 text-xs py-3 transition">Delete Activity</button>
+                </div>
+            </div>
+
+            <!-- Delete Confirmation View -->
+            <div id="detail-view-confirm" class="hidden py-8">
+                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                <h3 class="text-lg font-bold mb-2">Are you sure?</h3>
+                <p class="text-sm text-gray-400 mb-6">This will permanently remove this activity.</p>
+                <div class="flex gap-2 justify-center">
+                    <button onclick="cancelDelete()" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white">Cancel</button>
+                    <button onclick="confirmDelete()" class="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings/Export Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700 shadow-2xl">
+            <h2 class="text-xl font-bold mb-4">Settings</h2>
+            
+            <!-- Data IO Area -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-400 mb-2">Backup / Restore</label>
+                <textarea id="data-io-area" rows="6" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500 placeholder-gray-600" placeholder="Copy data from here to backup. Paste data here to restore."></textarea>
+            </div>
+
+            <div class="flex gap-2 mb-6">
+                <button onclick="copyDataToClipboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm transition">
+                    <i class="fas fa-copy mr-1"></i> Copy
+                </button>
+                <button onclick="loadDataFromTextarea()" class="flex-1 bg-blue-900 hover:bg-blue-800 text-blue-100 py-2 rounded text-sm transition">
+                    <i class="fas fa-upload mr-1"></i> Load
+                </button>
+            </div>
+
+            <div class="border-t border-gray-700 pt-4 mt-4">
+                <button onclick="clearAllData()" class="w-full py-2 text-red-500 hover:text-red-400 text-sm border border-red-900/50 rounded hover:bg-red-900/20 transition">
+                    <i class="fas fa-trash mr-2"></i> Reset Application
+                </button>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeModal('settings-modal')" class="px-4 py-2 rounded text-gray-400 hover:text-white">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- PWA Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
+        }
+
+        // --- State Management ---
+        let tasks = [];
+        let zoomLevel = 0; 
+        let currentDetailId = null;
+        
+        // --- Constants ---
+        const COLORS = {
+            good: { r: 34, g: 197, b: 94 },
+            mid: { r: 239, g: 68, b: 68 },
+            dead: { r: 17, g: 24, b: 39 } 
+        };
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setupZoom();
+            render();
+            setInterval(render, 60000); 
+        });
+
+        // --- Logic ---
+        function calculateHealth(task) {
+            const now = new Date();
+            const last = new Date(task.last_done_at);
+            const diffMs = now - last;
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            const f = task.frequency_days;
+
+            let health = 0;
+            if (diffDays <= f) health = 100;
+            else if (diffDays < (2 * f)) health = 100 * (2 - (diffDays / f));
+            else health = 0;
+
+            return { value: Math.max(0, Math.min(100, health)), daysSince: diffDays };
+        }
+
+        function getHealthColor(health) {
+            let r, g, b;
+            if (health >= 50) {
+                const t = (health - 50) / 50; 
+                r = Math.round(COLORS.mid.r + (COLORS.good.r - COLORS.mid.r) * t);
+                g = Math.round(COLORS.mid.g + (COLORS.good.g - COLORS.mid.g) * t);
+                b = Math.round(COLORS.mid.b + (COLORS.good.b - COLORS.mid.b) * t);
+            } else {
+                const t = health / 50;
+                r = Math.round(COLORS.dead.r + (COLORS.mid.r - COLORS.dead.r) * t);
+                g = Math.round(COLORS.dead.g + (COLORS.mid.g - COLORS.dead.g) * t);
+                b = Math.round(COLORS.dead.b + (COLORS.mid.b - COLORS.dead.b) * t);
+            }
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function getInitials(title) {
+            return title.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase();
+        }
+
+        // --- Rendering ---
+        function setupZoom() {
+            const slider = document.getElementById('zoom-slider');
+            slider.value = localStorage.getItem('nemus_app_zoom') || 0;
+            zoomLevel = parseInt(slider.value);
+            slider.addEventListener('input', (e) => {
+                zoomLevel = parseInt(e.target.value);
+                localStorage.setItem('nemus_app_zoom', zoomLevel);
+                renderGrid();
+            });
+        }
+
+        function render() {
+            renderGrid();
+            renderScore();
+        }
+
+        function renderScore() {
+            if (tasks.length === 0) {
+                document.getElementById('life-score').innerText = '-';
+                document.getElementById('score-circle').style.stroke = '#374151';
+                document.getElementById('score-circle').style.strokeDashoffset = 175.9;
+                return;
+            }
+            let totalHealth = 0;
+            tasks.forEach(t => totalHealth += calculateHealth(t).value);
+            const score = Math.round(totalHealth / tasks.length);
+            
+            document.getElementById('life-score').innerText = score;
+            const circle = document.getElementById('score-circle');
+            circle.style.strokeDashoffset = 175.9 - (score / 100) * 175.9;
+            circle.style.stroke = getHealthColor(score);
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('grid-container');
+            const emptyState = document.getElementById('empty-state');
+            container.innerHTML = '';
+
+            if (tasks.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            let gridCols = '';
+            if (zoomLevel === 0) gridCols = 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
+            if (zoomLevel === 1) gridCols = 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10';
+            if (zoomLevel === 2) gridCols = 'grid-cols-8 sm:grid-cols-12 md:grid-cols-16 lg:grid-cols-20 gap-1';
+            
+            container.className = `grid mx-auto ${gridCols}`;
+
+            tasks.forEach(task => {
+                const healthData = calculateHealth(task);
+                const color = getHealthColor(healthData.value);
+                const tile = document.createElement('div');
+                
+                tile.className = `tile cursor-pointer relative rounded-lg overflow-hidden shadow-md hover:shadow-xl hover:scale-105 transform border border-gray-800 select-none`;
+                tile.style.backgroundColor = color;
+                tile.onclick = () => openDetail(task.id);
+
+                if (zoomLevel === 0) {
+                    tile.classList.add('aspect-square', 'p-4', 'flex', 'flex-col', 'justify-between');
+                    const daysAgo = Math.floor(healthData.daysSince);
+                    const timeText = daysAgo === 0 ? 'Today' : `${daysAgo}d ago`;
+                    tile.innerHTML = `
+                        <div class="font-bold text-lg leading-tight drop-shadow-md break-words">${task.title}</div>
+                        <div class="text-xs font-mono opacity-80 drop-shadow-md flex justify-between items-end">
+                            <span>Every ${task.frequency_days}d</span>
+                            <span>${timeText}</span>
+                        </div>
+                    `;
+                } else if (zoomLevel === 1) {
+                    tile.classList.add('aspect-square', 'flex', 'items-center', 'justify-center');
+                    tile.innerHTML = `<span class="font-bold text-xl drop-shadow-md select-none">${getInitials(task.title)}</span>`;
+                } else {
+                    tile.classList.add('aspect-square');
+                    tile.title = task.title;
+                }
+                container.appendChild(tile);
+            });
+        }
+
+        // --- Actions ---
+        function handleAddTask(e) {
+            e.preventDefault();
+            const title = document.getElementById('task-title').value;
+            const freq = parseInt(document.getElementById('task-freq').value);
+            
+            tasks.push({
+                id: crypto.randomUUID(),
+                title: title,
+                frequency_days: freq,
+                last_done_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
+            });
+            
+            saveData();
+            render();
+            closeModal('add-modal');
+            e.target.reset();
+        }
+
+        function openDetail(id) {
+            currentDetailId = id;
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('detail-view-main').classList.remove('hidden');
+            document.getElementById('detail-view-confirm').classList.add('hidden');
+
+            const healthData = calculateHealth(task);
+            const daysAgo = Math.floor(healthData.daysSince);
+            
+            document.getElementById('detail-title').innerText = task.title;
+            document.getElementById('detail-freq').innerText = `Every ${task.frequency_days} days`;
+            document.getElementById('detail-last').innerText = daysAgo === 0 ? 'Today' : `${daysAgo} days ago`;
+            
+            const healthEl = document.getElementById('detail-health');
+            healthEl.innerText = Math.round(healthData.value) + '%';
+            healthEl.style.color = getHealthColor(healthData.value);
+            document.getElementById('detail-color-indicator').style.backgroundColor = getHealthColor(healthData.value);
+
+            openModal('detail-modal');
+        }
+
+        function handleDoneNow() {
+            if (!currentDetailId) return;
+            const task = tasks.find(t => t.id === currentDetailId);
+            if (task) {
+                task.last_done_at = new Date().toISOString();
+                saveData();
+                render();
+                closeModal('detail-modal');
+            }
+        }
+
+      
