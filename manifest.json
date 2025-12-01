@@ -8,9 +8,9 @@
     "description": "Life maintenance dashboard",
     "icons": [
         {
-            "src": "/icons/1.png",
+            "src": "/channels4_profile.jpg",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/jpg"
         }
     ]
 }
