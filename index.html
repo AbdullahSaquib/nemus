@@ -404,5 +404,105 @@
                 closeModal('detail-modal');
             }
         }
+function showDeleteConfirm() {
+            document.getElementById('detail-view-main').classList.add('hidden');
+            document.getElementById('detail-view-confirm').classList.remove('hidden');
+        }
+
+        function cancelDelete() {
+            document.getElementById('detail-view-main').classList.remove('hidden');
+            document.getElementById('detail-view-confirm').classList.add('hidden');
+        }
+
+        function confirmDelete() {
+            if (!currentDetailId) return;
+            tasks = tasks.filter(t => t.id !== currentDetailId);
+            saveData();
+            render();
+            closeModal('detail-modal');
+            currentDetailId = null;
+        }
+
+        // --- Settings / Export ---
+        function openSettings() {
+            const textArea = document.getElementById('data-io-area');
+            textArea.value = JSON.stringify(tasks, null, 2);
+            openModal('settings-modal');
+        }
+
+        function copyDataToClipboard() {
+            const textArea = document.getElementById('data-io-area');
+            textArea.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard');
+        }
+
+        function loadDataFromTextarea() {
+            const text = document.getElementById('data-io-area').value;
+            try {
+                const parsed = JSON.parse(text);
+                if (Array.isArray(parsed)) {
+                    tasks = parsed;
+                    saveData();
+                    render();
+                    alert('Loaded successfully');
+                    closeModal('settings-modal');
+                } else {
+                    alert('Invalid data format');
+                }
+            } catch (e) {
+                alert('Invalid JSON');
+            }
+        }
+
+        function clearAllData() {
+            const check = prompt("Type 'DELETE' to wipe all data:");
+            if (check === 'DELETE') {
+                tasks = [];
+                saveData();
+                render();
+                closeModal('settings-modal');
+            }
+        }
+
+        // --- Storage ---
+        function saveData() {
+            localStorage.setItem('nemus_app_tasks', JSON.stringify(tasks));
+        }
+
+        function loadData() {
+            const stored = localStorage.getItem('nemus_app_tasks');
+            if (stored) {
+                try {
+                    tasks = JSON.parse(stored);
+                } catch(e) { tasks = []; }
+            }
+        }
+
+        // --- Modal Helpers ---
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                const content = modal.firstElementChild;
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const content = modal.firstElementChild;
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        window.onclick = (e) => {
+            if (e.target.classList.contains('fixed')) closeModal(e.target.id);
+        };
+    </script>
+</body>
+</html>
 
       
