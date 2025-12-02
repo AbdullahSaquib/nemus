@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nemus</title>
     
-    <!-- PWA Setup -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#111827">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,11 +51,9 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header / Stats -->
     <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-20 shadow-lg select-none">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             
-            <!-- Life Score -->
             <div class="flex items-center gap-4">
                 <div class="relative w-16 h-16 flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90">
@@ -72,7 +69,6 @@
                 </div>
             </div>
 
-            <!-- Controls -->
             <div class="flex items-center gap-6 w-full md:w-auto justify-center">
                 <div class="flex items-center gap-2 w-32">
                     <i class="fas fa-th text-gray-500 text-xs"></i>
@@ -90,11 +86,9 @@
         </div>
     </header>
 
-    <!-- Main Dashboard Grid -->
     <main class="flex-grow p-4 md:p-8 overflow-y-auto pb-24">
         <div id="grid-container" class="grid gap-2 mx-auto transition-all duration-300">
-            <!-- Tiles injected here -->
-        </div>
+            </div>
         
         <div id="empty-state" class="hidden flex flex-col items-center justify-center mt-20 text-gray-500">
             <i class="fas fa-seedling text-6xl mb-4 text-gray-700"></i>
@@ -103,7 +97,6 @@
         </div>
     </main>
 
-    <!-- Add Task Modal -->
     <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
         <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700 shadow-2xl transform transition-all">
             <h2 class="text-xl font-bold mb-4">New Activity</h2>
@@ -124,18 +117,29 @@
         </div>
     </div>
 
-    <!-- Task Detail Modal -->
     <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
         <div class="bg-gray-800 rounded-xl p-6 w-full max-w-sm border border-gray-700 shadow-2xl text-center transform transition-all relative">
-            <button onclick="closeModal('detail-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center">
+            <button onclick="closeModal('detail-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center z-10">
                 <i class="fas fa-times"></i>
             </button>
             
-            <!-- Default View -->
             <div id="detail-view-main">
                 <div id="detail-color-indicator" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-gray-700 shadow-inner transition-colors duration-500"></div>
-                <h2 id="detail-title" class="text-2xl font-bold mb-1 break-words">Task Title</h2>
-                <p id="detail-freq" class="text-gray-400 text-sm mb-6">Every 7 days</p>
+                
+                <div class="mb-1 relative group">
+                    <h2 id="detail-title-display" onclick="startEdit('title')" class="text-2xl font-bold break-words cursor-pointer border-b border-transparent hover:border-gray-500 inline-block transition-colors" title="Click to edit"></h2>
+                    <i class="fas fa-pen text-xs text-gray-600 absolute top-2 -right-4 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                    <input id="detail-title-input" type="text" class="hidden w-full bg-gray-900 border border-blue-500 rounded p-2 text-center font-bold text-xl text-white focus:outline-none" onblur="saveEdit('title')" onkeydown="handleEditKey(event, 'title')">
+                </div>
+
+                <div class="mb-6 relative group inline-block">
+                    <p id="detail-freq-display" onclick="startEdit('freq')" class="text-gray-400 text-sm cursor-pointer border-b border-transparent hover:border-gray-500 inline-block transition-colors" title="Click to edit"></p>
+                    <div id="detail-freq-input-wrapper" class="hidden flex items-center justify-center gap-2">
+                        <span class="text-gray-500 text-sm">Every</span>
+                        <input id="detail-freq-input" type="number" min="1" class="w-20 bg-gray-900 border border-blue-500 rounded p-1 text-center text-sm text-white focus:outline-none" onblur="saveEdit('freq')" onkeydown="handleEditKey(event, 'freq')">
+                        <span class="text-gray-500 text-sm">days</span>
+                    </div>
+                </div>
 
                 <div class="grid grid-cols-2 gap-4 mb-6 text-left bg-gray-900 p-4 rounded-lg">
                     <div>
@@ -152,11 +156,25 @@
                     <button onclick="handleDoneNow()" class="w-full py-4 bg-green-600 hover:bg-green-500 rounded-lg text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
                         <i class="fas fa-check"></i> Done Now
                     </button>
-                    <button onclick="showDeleteConfirm()" class="text-red-900 hover:text-red-500 text-xs py-3 transition">Delete Activity</button>
+                    
+                    <div class="border-t border-gray-700 pt-2 mt-2">
+                        <button onclick="toggleAdvanced()" class="text-xs text-gray-400 hover:text-blue-400 flex items-center justify-center w-full gap-2 py-2 transition-colors">
+                            <span>Advanced Options</span>
+                            <i id="adv-chevron" class="fas fa-chevron-down transition-transform duration-300"></i>
+                        </button>
+                        
+                        <div id="detail-advanced" class="hidden overflow-hidden transition-all duration-300 ease-in-out">
+                            <div class="bg-gray-900/50 p-3 rounded-lg mt-2 text-left border border-gray-700/50">
+                                <label class="block text-xs text-gray-500 mb-2 font-medium">Manually set 'Last Done':</label>
+                                <input type="datetime-local" id="manual-date-input" onchange="updateDateManually()" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="showDeleteConfirm()" class="text-red-900 hover:text-red-500 text-xs py-3 transition mt-2">Delete Activity</button>
                 </div>
             </div>
 
-            <!-- Delete Confirmation View -->
             <div id="detail-view-confirm" class="hidden py-8">
                 <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
                 <h3 class="text-lg font-bold mb-2">Are you sure?</h3>
@@ -169,12 +187,10 @@
         </div>
     </div>
 
-    <!-- Settings/Export Modal -->
     <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
         <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700 shadow-2xl">
             <h2 class="text-xl font-bold mb-4">Settings</h2>
             
-            <!-- Data IO Area -->
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-400 mb-2">Backup / Restore</label>
                 <textarea id="data-io-area" rows="6" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500 placeholder-gray-600" placeholder="Copy data from here to backup. Paste data here to restore."></textarea>
@@ -371,27 +387,127 @@
             e.target.reset();
         }
 
+        // --- Detail View Logic (Updated) ---
+
         function openDetail(id) {
             currentDetailId = id;
             const task = tasks.find(t => t.id === id);
             if (!task) return;
 
+            // Reset View States
             document.getElementById('detail-view-main').classList.remove('hidden');
             document.getElementById('detail-view-confirm').classList.add('hidden');
+            
+            // Reset Edit States
+            document.getElementById('detail-title-display').classList.remove('hidden');
+            document.getElementById('detail-title-input').classList.add('hidden');
+            document.getElementById('detail-freq-display').classList.remove('hidden');
+            document.getElementById('detail-freq-input-wrapper').classList.add('hidden');
 
+            // Reset Advanced Section
+            document.getElementById('detail-advanced').classList.add('hidden');
+            document.getElementById('adv-chevron').style.transform = 'rotate(0deg)';
+
+            updateDetailContent(task);
+            openModal('detail-modal');
+        }
+
+        // Helper to refresh content inside modal without closing it
+        function updateDetailContent(task) {
             const healthData = calculateHealth(task);
             const daysAgo = Math.floor(healthData.daysSince);
             
-            document.getElementById('detail-title').innerText = task.title;
-            document.getElementById('detail-freq').innerText = `Every ${task.frequency_days} days`;
+            // Populate Text
+            document.getElementById('detail-title-display').innerText = task.title;
+            document.getElementById('detail-freq-display').innerText = `Every ${task.frequency_days} days`;
             document.getElementById('detail-last').innerText = daysAgo === 0 ? 'Today' : `${daysAgo} days ago`;
             
+            // Populate Inputs (for editing)
+            document.getElementById('detail-title-input').value = task.title;
+            document.getElementById('detail-freq-input').value = task.frequency_days;
+
+            // Populate Health
             const healthEl = document.getElementById('detail-health');
             healthEl.innerText = Math.round(healthData.value) + '%';
             healthEl.style.color = getHealthColor(healthData.value);
             document.getElementById('detail-color-indicator').style.backgroundColor = getHealthColor(healthData.value);
 
-            openModal('detail-modal');
+            // Populate Manual Date Picker (Convert ISO to local datetime-local format)
+            const d = new Date(task.last_done_at);
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); // Adjust for timezone
+            document.getElementById('manual-date-input').value = d.toISOString().slice(0, 16);
+        }
+
+        // --- Inline Editing Functions ---
+
+        function startEdit(type) {
+            if (type === 'title') {
+                document.getElementById('detail-title-display').classList.add('hidden');
+                const inp = document.getElementById('detail-title-input');
+                inp.classList.remove('hidden');
+                inp.focus();
+            } else if (type === 'freq') {
+                document.getElementById('detail-freq-display').classList.add('hidden');
+                const wrapper = document.getElementById('detail-freq-input-wrapper');
+                wrapper.classList.remove('hidden');
+                document.getElementById('detail-freq-input').focus();
+            }
+        }
+
+        function saveEdit(type) {
+            const task = tasks.find(t => t.id === currentDetailId);
+            if (!task) return;
+
+            if (type === 'title') {
+                const val = document.getElementById('detail-title-input').value.trim();
+                if (val) task.title = val;
+                document.getElementById('detail-title-input').classList.add('hidden');
+                document.getElementById('detail-title-display').classList.remove('hidden');
+            } else if (type === 'freq') {
+                const val = parseInt(document.getElementById('detail-freq-input').value);
+                if (val && val > 0) task.frequency_days = val;
+                document.getElementById('detail-freq-input-wrapper').classList.add('hidden');
+                document.getElementById('detail-freq-display').classList.remove('hidden');
+            }
+
+            saveData();
+            render();
+            updateDetailContent(task); // Refresh modal to show changes
+        }
+
+        function handleEditKey(e, type) {
+            if (e.key === 'Enter') {
+                saveEdit(type);
+            }
+        }
+
+        // --- Advanced Options Functions ---
+
+        function toggleAdvanced() {
+            const section = document.getElementById('detail-advanced');
+            const chevron = document.getElementById('adv-chevron');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                section.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function updateDateManually() {
+            const val = document.getElementById('manual-date-input').value;
+            if (!val || !currentDetailId) return;
+
+            const task = tasks.find(t => t.id === currentDetailId);
+            if (task) {
+                // Create date object from input and convert back to ISO
+                task.last_done_at = new Date(val).toISOString();
+                saveData();
+                render();
+                updateDetailContent(task);
+            }
         }
 
         function handleDoneNow() {
@@ -404,7 +520,8 @@
                 closeModal('detail-modal');
             }
         }
-function showDeleteConfirm() {
+
+        function showDeleteConfirm() {
             document.getElementById('detail-view-main').classList.add('hidden');
             document.getElementById('detail-view-confirm').classList.remove('hidden');
         }
@@ -504,5 +621,3 @@ function showDeleteConfirm() {
     </script>
 </body>
 </html>
-
-      
