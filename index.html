@@ -198,16 +198,16 @@
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-400 mb-2">Backup / Restore</label>
-                <textarea id="data-io-area" rows="6" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500 placeholder-gray-600" placeholder="Copy data from here to backup. Paste data here to restore."></textarea>
             </div>
 
             <div class="flex gap-2 mb-6">
-                <button onclick="copyDataToClipboard()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm transition">
-                    <i class="fas fa-copy mr-1"></i> Copy
+                <button onclick="downloadData()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-sm transition">
+                    <i class="fas fa-download mr-1"></i> Download
                 </button>
-                <button onclick="loadDataFromTextarea()" class="flex-1 bg-blue-900 hover:bg-blue-800 text-blue-100 py-2 rounded text-sm transition">
-                    <i class="fas fa-upload mr-1"></i> Load
-                </button>
+                <label class="flex-1 bg-blue-900 hover:bg-blue-800 text-blue-100 py-2 rounded text-sm transition cursor-pointer text-center">
+                    <i class="fas fa-upload mr-1"></i> Upload
+                    <input type="file" accept=".json" class="hidden" onchange="uploadData(event)">
+                </label>
             </div>
 
             <div class="border-t border-gray-700 pt-4 mt-4">
@@ -550,34 +550,45 @@
 
         // --- Settings / Export ---
         function openSettings() {
-            const textArea = document.getElementById('data-io-area');
-            textArea.value = JSON.stringify(tasks, null, 2);
             openModal('settings-modal');
         }
 
-        function copyDataToClipboard() {
-            const textArea = document.getElementById('data-io-area');
-            textArea.select();
-            document.execCommand('copy');
-            alert('Copied to clipboard');
+        function downloadData() {
+            const dataStr = JSON.stringify(tasks, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `nemus-backup-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
-        function loadDataFromTextarea() {
-            const text = document.getElementById('data-io-area').value;
-            try {
-                const parsed = JSON.parse(text);
-                if (Array.isArray(parsed)) {
+        function uploadData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!Array.isArray(parsed)) {
+                        alert("Invalid backup file");
+                        return;
+                    }
                     tasks = parsed;
                     saveData();
                     render();
-                    alert('Loaded successfully');
+                    alert("Backup restored successfully");
                     closeModal('settings-modal');
-                } else {
-                    alert('Invalid data format');
+                } catch (err) {
+                    alert("Invalid JSON file");
                 }
-            } catch (e) {
-                alert('Invalid JSON');
-            }
+            };
+            reader.readAsText(file);
         }
 
         function clearAllData() {
