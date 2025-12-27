@@ -592,7 +592,28 @@
             if (stored) {
                 try {
                     tasks = JSON.parse(stored);
-                } catch(e) { tasks = []; }
+                } catch(e) { 
+                    tasks = []; 
+                }
+            } 
+            // If tasks list is still empty (New User), inject starter tasks
+            if (tasks.length === 0) {
+                const starterTasks = [
+                    { title: "Exercise", freq: 1 },
+                    { title: "Practice Guitar", freq: 2 },
+                    { title: "Meditate", freq: 1 },
+                    { title: "Travel", freq: 60 }
+                ];
+                tasks = starterTasks.map(task => ({
+                    id: crypto.randomUUID(),
+                    title: task.title,
+                    frequency_days: task.freq,
+                    // Set to current time so they start at 100% health
+                    last_done_at: new Date().toISOString(), 
+                    created_at: new Date().toISOString()
+                }));
+                // Save these immediately so they persist
+                saveData();
             }
         }
 
