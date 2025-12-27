@@ -47,6 +47,11 @@
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%; height: 4px; cursor: pointer; background: #374151; border-radius: 2px;
         }
+        .tile.dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+            z-index: 50;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -318,6 +323,7 @@
         }
 
         function renderGrid() {
+            tasks.sort((a, b) => a.order - b.order);
             const container = document.getElementById('grid-container');
             const emptyState = document.getElementById('empty-state');
             container.innerHTML = '';
@@ -340,7 +346,8 @@
                 const healthData = calculateHealth(task);
                 const color = getHealthColor(healthData.value);
                 const tile = document.createElement('div');
-                
+                tile.draggable = true;
+                tile.dataset.id = task.id;
                 tile.className = `tile cursor-pointer relative rounded-lg overflow-hidden shadow-md hover:shadow-xl hover:scale-105 transform border border-gray-800 select-none`;
                 tile.style.backgroundColor = color;
                 tile.onclick = () => openDetail(task.id);
@@ -378,7 +385,8 @@
                 title: title,
                 frequency_days: freq,
                 last_done_at: new Date().toISOString(),
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                order: tasks.length
             });
             
             saveData();
@@ -604,13 +612,13 @@
                     { title: "Meditate", freq: 1 },
                     { title: "Travel", freq: 60 }
                 ];
-                tasks = starterTasks.map(task => ({
+                tasks = starterTasks.map((task, index) => ({
                     id: crypto.randomUUID(),
                     title: task.title,
                     frequency_days: task.freq,
-                    // Set to current time so they start at 100% health
-                    last_done_at: new Date().toISOString(), 
-                    created_at: new Date().toISOString()
+                    last_done_at: new Date().toISOString(),
+                    created_at: new Date().toISOString(),
+                    order: index
                 }));
                 // Save these immediately so they persist
                 saveData();
@@ -639,6 +647,70 @@
         window.onclick = (e) => {
             if (e.target.classList.contains('fixed')) closeModal(e.target.id);
         };
+
+        function reorderTasks(sourceId, targetId) {
+            const sourceIndex = tasks.findIndex(t => t.id === sourceId);
+            const targetIndex = tasks.findIndex(t => t.id === targetId);
+
+            const [moved] = tasks.splice(sourceIndex, 1);
+            tasks.splice(targetIndex, 0, moved);
+
+            // Reassign order values
+            tasks.forEach((t, i) => t.order = i);
+
+            saveData();
+            render();
+        }
+
+        let draggedId = null;
+
+        document.addEventListener('dragstart', e => {
+            const tile = e.target.closest('.tile');
+            if (!tile) return;
+            draggedId = tile.dataset.id;
+            tile.classList.add('opacity-50');
+        });
+
+        document.addEventListener('dragend', e => {
+            const tile = e.target.closest('.tile');
+            if (tile) tile.classList.remove('opacity-50');
+        });
+
+        document.addEventListener('dragover', e => {
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', e => {
+            e.preventDefault();
+            const targetTile = e.target.closest('.tile');
+            if (!targetTile || !draggedId) return;
+
+            const targetId = targetTile.dataset.id;
+            if (draggedId === targetId) return;
+
+            reorderTasks(draggedId, targetId);
+        });
+
+        let touchStartId = null;
+
+        document.addEventListener('touchstart', e => {
+            const tile = e.target.closest('.tile');
+            if (!tile) return;
+            touchStartId = tile.dataset.id;
+        });
+
+        document.addEventListener('touchend', e => {
+            const tile = e.target.closest('.tile');
+            if (!tile || !touchStartId) return;
+
+            const targetId = tile.dataset.id;
+            if (touchStartId !== targetId) {
+                reorderTasks(touchStartId, targetId);
+            }
+
+            touchStartId = null;
+        });
+
     </script>
 </body>
 </html>
